@@ -1,0 +1,11 @@
+@import 'tailwindcss';
+@custom-variant dark (&:is(.dark, .dark *));
+
+html,
+body {
+  @apply dark:bg-gray-950 dark:text-white;
+}
+
+:focus-visible {
+  @apply outline-2;
+}
