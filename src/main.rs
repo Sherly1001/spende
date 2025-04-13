@@ -13,12 +13,18 @@ use db::Db;
 fn rocket() -> _ {
     dotenv::dotenv().ok();
 
-    let sf = snowflake_me::Snowflake::new().unwrap();
+    let sf = snowflake_me::Snowflake::new().expect("Failed to create Snowflake instance");
     let key = env::var("JWT_SECRET").expect("JWT_SECRET must be set");
+
+    let cors = rocket_cors::CorsOptions::default()
+        .allow_credentials(true)
+        .to_cors()
+        .expect("Failed to create CORS options");
 
     rocket::build()
         .manage(sf)
         .manage(key)
+        .attach(cors)
         .attach(Db::init())
         .mount(
             "/api",
