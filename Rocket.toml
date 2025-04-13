@@ -1,0 +1,2 @@
+[default.databases.spende]
+url = "./data/spende.sqlite"
