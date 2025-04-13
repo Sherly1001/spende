@@ -7,3 +7,4 @@ pub struct Db(sqlx::SqlitePool);
 pub type DbConn = Connection<Db>;
 
 pub mod users;
+pub mod wallets;

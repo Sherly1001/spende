@@ -6,7 +6,10 @@ use rocket_db_pools::Database;
 mod api;
 mod db;
 
-use api::users::{create_user, delete_user, get_user, login_user, update_user};
+use api::{
+    users::{create_user, delete_user, get_user, login_user, update_user},
+    wallets::{create_wallet, delete_wallet, get_wallets, update_wallet},
+};
 use db::Db;
 
 #[launch]
@@ -28,6 +31,18 @@ fn rocket() -> _ {
         .attach(Db::init())
         .mount(
             "/api",
-            routes![create_user, get_user, update_user, delete_user, login_user],
+            routes![
+                // "/api/users",
+                create_user,
+                get_user,
+                update_user,
+                delete_user,
+                login_user,
+                // "/api/wallets",
+                get_wallets,
+                create_wallet,
+                update_wallet,
+                delete_wallet,
+            ],
         )
 }
