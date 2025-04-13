@@ -11,12 +11,12 @@ pub type Response = Result<ResponseOk, ResponseError>;
 pub type ResponseOk = Value;
 pub type ResponseError = (Status, Value);
 
-pub fn create_error(code: u16, reason: &str, description: &str) -> ResponseError {
+pub fn create_error(status: Status, reason: &str, description: &str) -> ResponseError {
     (
-        Status::new(code),
+        status,
         json!({
             "error": {
-                "code": code,
+                "code": status.code,
                 "reason": reason,
                 "description": description,
             }
@@ -26,6 +26,12 @@ pub fn create_error(code: u16, reason: &str, description: &str) -> ResponseError
 
 pub fn generate_id(sf: &Snowflake) -> Result<String, ResponseError> {
     sf.next_id()
-        .map_err(|err| create_error(500, "Failed to generate id", err.to_string().as_str()))
+        .map_err(|err| {
+            create_error(
+                Status::InternalServerError,
+                "Failed to generate id",
+                err.to_string().as_str(),
+            )
+        })
         .map(|id| id.to_string())
 }

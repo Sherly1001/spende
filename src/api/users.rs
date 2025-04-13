@@ -4,7 +4,7 @@ use hmac::{digest::KeyInit, Hmac};
 use jwt::SignWithKey;
 use rocket::{
     delete, get,
-    http::{Cookie, CookieJar},
+    http::{Cookie, CookieJar, Status},
     post, put,
     serde::json::{json, Json},
     time::Duration,
@@ -44,8 +44,13 @@ pub async fn create_user(
 ) -> Response {
     let id = generate_id(sf)?;
 
-    let hashed_password = bcrypt::hash(&user.password, bcrypt::DEFAULT_COST)
-        .map_err(|err| create_error(500, "Failed to hash password", err.to_string().as_str()))?;
+    let hashed_password = bcrypt::hash(&user.password, bcrypt::DEFAULT_COST).map_err(|err| {
+        create_error(
+            Status::InternalServerError,
+            "Failed to hash password",
+            err.to_string().as_str(),
+        )
+    })?;
 
     sqlx::query("INSERT INTO users (id, name, username, hashed_password) VALUES (?, ?, ?, ?)")
         .bind(&id)
@@ -54,7 +59,13 @@ pub async fn create_user(
         .bind(&hashed_password)
         .execute(&mut **db)
         .await
-        .map_err(|err| create_error(422, "Failed to create user", err.to_string().as_str()))?;
+        .map_err(|err| {
+            create_error(
+                Status::UnprocessableEntity,
+                "Failed to create user",
+                err.to_string().as_str(),
+            )
+        })?;
 
     create_token(cookies, key, id.clone());
 
@@ -85,14 +96,14 @@ pub async fn update_user(user: Json<UpdateUser>, auth_user: AuthUser, mut db: Db
         if let Some(old_password) = &user.old_password {
             if !bcrypt::verify(old_password, &db_user.hashed_password).unwrap() {
                 return Err(create_error(
-                    401,
+                    Status::Unauthorized,
                     "Invalid credentials",
                     "Invalid old password",
                 ));
             }
         } else {
             return Err(create_error(
-                400,
+                Status::BadRequest,
                 "Invalid request",
                 "Old password is required",
             ));
@@ -100,7 +111,11 @@ pub async fn update_user(user: Json<UpdateUser>, auth_user: AuthUser, mut db: Db
 
         updated_user.hashed_password =
             bcrypt::hash(password, bcrypt::DEFAULT_COST).map_err(|err| {
-                create_error(500, "Failed to hash password", err.to_string().as_str())
+                create_error(
+                    Status::InternalServerError,
+                    "Failed to hash password",
+                    err.to_string().as_str(),
+                )
             })?;
     }
 
@@ -111,7 +126,13 @@ pub async fn update_user(user: Json<UpdateUser>, auth_user: AuthUser, mut db: Db
         .bind(&db_user.id)
         .execute(&mut **db)
         .await
-        .map_err(|err| create_error(422, "Failed to update user", err.to_string().as_str()))?;
+        .map_err(|err| {
+            create_error(
+                Status::UnprocessableEntity,
+                "Failed to update user",
+                err.to_string().as_str(),
+            )
+        })?;
 
     Ok(json!({
         "data": {
@@ -130,7 +151,13 @@ pub async fn delete_user(auth_user: AuthUser, cookies: &CookieJar<'_>, mut db: D
         .bind(&db_user.id)
         .execute(&mut **db)
         .await
-        .map_err(|err| create_error(422, "Failed to delete user", err.to_string().as_str()))?;
+        .map_err(|err| {
+            create_error(
+                Status::UnprocessableEntity,
+                "Failed to delete user",
+                err.to_string().as_str(),
+            )
+        })?;
 
     clear_token(cookies);
 
@@ -151,7 +178,11 @@ pub async fn login_user(
     key: &State<String>,
 ) -> Response {
     clear_token(cookies);
-    let unauthenticated = create_error(401, "Invalid credentials", "Invalid username or password");
+    let unauthenticated = create_error(
+        Status::Unauthorized,
+        "Invalid credentials",
+        "Invalid username or password",
+    );
 
     let db_user: User = sqlx::query("SELECT * FROM users WHERE username = ?")
         .bind(&user.username)
