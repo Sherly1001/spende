@@ -6,7 +6,7 @@ use rocket::{
     delete, get,
     http::{Cookie, CookieJar, Status},
     post, put,
-    serde::json::{json, Json},
+    serde::json::json,
     time::Duration,
     State,
 };
@@ -19,11 +19,13 @@ use crate::db::{
     DbConn,
 };
 
-use super::{auth::AuthUser, create_error, generate_id, Response};
+use super::{
+    auth::AuthUserResult, create_error, generate_id, validated_json::ValidatedJsonResult, Response,
+};
 
 #[get("/users")]
-pub async fn get_user(user: AuthUser) -> Response {
-    let user = user.0;
+pub async fn get_user(user: AuthUserResult) -> Response {
+    let user = user?.0;
 
     Ok(json!({
         "data": {
@@ -36,12 +38,14 @@ pub async fn get_user(user: AuthUser) -> Response {
 
 #[post("/users", data = "<user>")]
 pub async fn create_user(
-    user: Json<NewUser>,
+    user: ValidatedJsonResult<NewUser>,
     sf: &State<Snowflake>,
     cookies: &CookieJar<'_>,
     mut db: DbConn,
     key: &State<String>,
 ) -> Response {
+    let user = user.0?.0;
+
     let id = generate_id(sf)?;
 
     let hashed_password = bcrypt::hash(&user.password, bcrypt::DEFAULT_COST).map_err(|err| {
@@ -79,8 +83,13 @@ pub async fn create_user(
 }
 
 #[put("/users", data = "<user>")]
-pub async fn update_user(user: Json<UpdateUser>, auth_user: AuthUser, mut db: DbConn) -> Response {
-    let db_user = auth_user.0;
+pub async fn update_user(
+    auth_user: AuthUserResult,
+    user: ValidatedJsonResult<UpdateUser>,
+    mut db: DbConn,
+) -> Response {
+    let db_user = auth_user?.0;
+    let user = user.0?.0;
 
     let mut updated_user = db_user.clone();
 
@@ -144,8 +153,12 @@ pub async fn update_user(user: Json<UpdateUser>, auth_user: AuthUser, mut db: Db
 }
 
 #[delete("/users")]
-pub async fn delete_user(auth_user: AuthUser, cookies: &CookieJar<'_>, mut db: DbConn) -> Response {
-    let db_user = auth_user.0;
+pub async fn delete_user(
+    auth_user: AuthUserResult,
+    cookies: &CookieJar<'_>,
+    mut db: DbConn,
+) -> Response {
+    let db_user = auth_user?.0;
 
     sqlx::query("DELETE FROM users WHERE id = ?")
         .bind(&db_user.id)
@@ -172,11 +185,13 @@ pub async fn delete_user(auth_user: AuthUser, cookies: &CookieJar<'_>, mut db: D
 
 #[post("/users/login", data = "<user>")]
 pub async fn login_user(
-    user: Json<LoginUser>,
+    user: ValidatedJsonResult<LoginUser>,
     cookies: &CookieJar<'_>,
     mut db: DbConn,
     key: &State<String>,
 ) -> Response {
+    let user = user.0?.0;
+
     clear_token(cookies);
     let unauthenticated = create_error(
         Status::Unauthorized,

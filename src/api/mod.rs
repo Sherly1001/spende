@@ -6,6 +6,7 @@ use snowflake_me::Snowflake;
 
 pub mod auth;
 pub mod users;
+pub mod validated_json;
 
 pub type Response = Result<ResponseOk, ResponseError>;
 pub type ResponseOk = Value;
