@@ -199,12 +199,11 @@ pub async fn login_user(
         "Invalid username or password",
     );
 
-    let db_user: User = sqlx::query("SELECT * FROM users WHERE username = ?")
+    let db_user: User = sqlx::query_as("SELECT * FROM users WHERE username = ?")
         .bind(&user.username)
         .fetch_one(&mut **db)
         .await
-        .map_err(|_| unauthenticated.clone())?
-        .into();
+        .map_err(|_| unauthenticated.clone())?;
 
     if !bcrypt::verify(&user.password, &db_user.hashed_password).unwrap() {
         return Err(unauthenticated);

@@ -12,9 +12,7 @@ bcrypt = "0.17.0"
 snowflake_me = "0.3.1"
 
 serde = "1.0"
-rocket = { version = "0.5.1", features = ["json"] }
 rocket_cors = "0.6.0"
-
-[dependencies.rocket_db_pools]
-version = "0.2.0"
-features = ["sqlx_sqlite"]
+rocket = { version = "0.5.1", features = ["json"] }
+rocket_db_pools = { version = "0.2.0", features = ["sqlx_sqlite"] }
+sqlx = { version = "0.7", features = ["sqlite", "macros"] }

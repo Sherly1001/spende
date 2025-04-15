@@ -59,12 +59,12 @@ impl<'r> FromRequest<'r> for AuthUser {
             }
         };
 
-        let db_user: User = match sqlx::query("SELECT * FROM users WHERE id = ?")
+        let db_user: User = match sqlx::query_as("SELECT * FROM users WHERE id = ?")
             .bind(user_id)
             .fetch_one(&mut **db)
             .await
         {
-            Ok(user) => user.into(),
+            Ok(user) => user,
             Err(_) => return Outcome::Error((invalid_token_error.0, invalid_token_error)),
         };
 

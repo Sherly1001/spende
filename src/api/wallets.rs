@@ -15,7 +15,7 @@ use super::{
 pub async fn get_wallets(user: AuthUserResult, mut db: DbConn) -> Response {
     let user = user?.0;
 
-    let wallets = sqlx::query("SELECT * FROM wallets WHERE user_id = ?")
+    let wallets: Vec<Wallet> = sqlx::query_as("SELECT * FROM wallets WHERE user_id = ?")
         .bind(&user.id)
         .fetch_all(&mut **db)
         .await
@@ -26,8 +26,6 @@ pub async fn get_wallets(user: AuthUserResult, mut db: DbConn) -> Response {
                 err.to_string().as_str(),
             )
         })?;
-
-    let wallets: Vec<Wallet> = wallets.into_iter().map(|row| row.into()).collect();
 
     Ok(json!({
         "data": wallets,
@@ -88,7 +86,7 @@ pub async fn update_wallet(
     let user = user?.0;
     let mut wallet = wallet.0?.0;
 
-    let db_wallet: Wallet = sqlx::query("SELECT * FROM wallets WHERE id = ? AND user_id = ?")
+    let db_wallet: Wallet = sqlx::query_as("SELECT * FROM wallets WHERE id = ? AND user_id = ?")
         .bind(&id)
         .bind(&user.id)
         .fetch_one(&mut **db)
@@ -99,8 +97,7 @@ pub async fn update_wallet(
                 "Wallet not found",
                 err.to_string().as_str(),
             )
-        })?
-        .into();
+        })?;
 
     if wallet.rational.is_none() {
         wallet.rational = Some(db_wallet.rational);
@@ -139,7 +136,7 @@ pub async fn update_wallet(
 pub async fn delete_wallet(user: AuthUserResult, id: &str, mut db: DbConn) -> Response {
     let user = user?.0;
 
-    let db_wallet: Wallet = sqlx::query("SELECT * FROM wallets WHERE id = ? AND user_id = ?")
+    let db_wallet: Wallet = sqlx::query_as("SELECT * FROM wallets WHERE id = ? AND user_id = ?")
         .bind(&id)
         .bind(&user.id)
         .fetch_one(&mut **db)
@@ -150,8 +147,7 @@ pub async fn delete_wallet(user: AuthUserResult, id: &str, mut db: DbConn) -> Re
                 "Wallet not found",
                 err.to_string().as_str(),
             )
-        })?
-        .into();
+        })?;
 
     sqlx::query("DELETE FROM wallets WHERE id = ? AND user_id = ?")
         .bind(&id)

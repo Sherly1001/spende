@@ -1,7 +1,7 @@
-use rocket_db_pools::sqlx::{sqlite::SqliteRow, Row};
+use rocket_db_pools::sqlx::FromRow;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
 pub struct User {
     pub id: String,
     pub name: String,
@@ -28,15 +28,4 @@ pub struct UpdateUser {
 pub struct LoginUser {
     pub username: String,
     pub password: String,
-}
-
-impl From<SqliteRow> for User {
-    fn from(val: SqliteRow) -> Self {
-        User {
-            id: val.get("id"),
-            name: val.get("name"),
-            username: val.get("username"),
-            hashed_password: val.get("hashed_password"),
-        }
-    }
 }
