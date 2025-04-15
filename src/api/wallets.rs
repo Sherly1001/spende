@@ -48,31 +48,28 @@ pub async fn create_wallet(
 
     let id = generate_id(sf)?;
 
-    sqlx::query("INSERT INTO wallets (id, user_id, name, currency, rational, balance) VALUES (?, ?, ?, ?, ?, ?)")
-        .bind(&id)
-        .bind(&user.id)
-        .bind(&wallet.name)
-        .bind(&wallet.currency)
-        .bind(&wallet.rational)
-        .bind(0)
-        .execute(&mut **db)
-        .await
-        .map_err(|err| {
-            create_error(
-                Status::UnprocessableEntity,
-                "Failed to create wallet",
-                err.to_string().as_str(),
-            )
-        })?;
+    let wallet: Wallet = sqlx::query_as(
+        "INSERT INTO wallets (id, user_id, name, currency, rational, balance)
+        VALUES (?, ?, ?, ?, ?, ?) RETURNING *",
+    )
+    .bind(&id)
+    .bind(&user.id)
+    .bind(&wallet.name)
+    .bind(&wallet.currency)
+    .bind(&wallet.rational)
+    .bind(0)
+    .fetch_one(&mut **db)
+    .await
+    .map_err(|err| {
+        create_error(
+            Status::UnprocessableEntity,
+            "Failed to create wallet",
+            err.to_string().as_str(),
+        )
+    })?;
 
     Ok(json!({
-        "data": {
-            "id": id,
-            "name": wallet.name,
-            "currency": wallet.currency,
-            "rational": wallet.rational,
-            "balance": 0,
-        },
+        "data": wallet,
     }))
 }
 
@@ -103,15 +100,17 @@ pub async fn update_wallet(
         wallet.rational = Some(db_wallet.rational);
     }
 
-    sqlx::query(
-        "UPDATE wallets SET name = ?, currency = ?, rational = ? WHERE id = ? AND user_id = ?",
+    let wallet: Wallet = sqlx::query_as(
+        "UPDATE wallets SET name = ?, currency = ?, rational = ?
+        WHERE id = ? AND user_id = ?
+        RETURNING *",
     )
     .bind(&wallet.name)
     .bind(&wallet.currency)
     .bind(&wallet.rational)
     .bind(&id)
     .bind(&user.id)
-    .execute(&mut **db)
+    .fetch_one(&mut **db)
     .await
     .map_err(|err| {
         create_error(
@@ -122,13 +121,7 @@ pub async fn update_wallet(
     })?;
 
     Ok(json!({
-        "data": {
-            "id": id,
-            "name": wallet.name,
-            "currency": wallet.currency,
-            "rational": wallet.rational,
-            "balance": db_wallet.balance,
-        },
+        "data": wallet,
     }))
 }
 
@@ -163,12 +156,6 @@ pub async fn delete_wallet(user: AuthUserResult, id: &str, mut db: DbConn) -> Re
         })?;
 
     Ok(json!({
-        "data": {
-            "id": id,
-            "name": db_wallet.name,
-            "currency": db_wallet.currency,
-            "rational": db_wallet.rational,
-            "balance": db_wallet.balance,
-        },
+        "data": db_wallet,
     }))
 }
