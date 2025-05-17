@@ -8,6 +8,7 @@ import {
   updateUserSchema,
   UserModel,
 } from '../schemas/user'
+import { WalletModel } from '../schemas/wallet'
 import { JWT_SECRET } from '../utils/const'
 
 export async function getUserInfo(userId: Types.ObjectId | string) {
@@ -42,6 +43,7 @@ export async function updateUser(
 }
 
 export async function deleteUser(user: HydratedUser) {
+  await WalletModel.deleteMany({ user: user._id })
   await user.deleteOne()
 }
 

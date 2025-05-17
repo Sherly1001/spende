@@ -14,5 +14,10 @@ export const timestampsSchema = t.Object({
   updatedAt: t.Date(),
 })
 
+export const objectIdSchema = t.String({
+  pattern: '^[0-9a-fA-F]{24}$',
+  description: 'MongoDB ObjectId',
+})
+
 export const OptionalNullable = (schema: TSchema) =>
   t.Optional(t.Nullable(schema))
