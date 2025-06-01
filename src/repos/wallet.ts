@@ -1,11 +1,12 @@
 import { status } from 'elysia'
 import { isUndefined, omitBy } from 'lodash'
-import { Types } from 'mongoose'
+import mongoose, { ClientSession, Types } from 'mongoose'
 import {
   pureWalletSchema,
   updateWalletSchema,
   WalletModel,
 } from '../schemas/wallet'
+import { TransactionModel } from '../schemas/transaction'
 
 export async function getWallets(userId: Types.ObjectId) {
   return await WalletModel.find({ user: userId })
@@ -14,8 +15,11 @@ export async function getWallets(userId: Types.ObjectId) {
 export async function getWallet(
   userId: Types.ObjectId,
   walletId: Types.ObjectId,
+  session?: ClientSession,
 ) {
-  const wallet = await WalletModel.findOne({ user: userId, _id: walletId })
+  const query = WalletModel.findOne({ user: userId, _id: walletId })
+  if (session) query.session(session)
+  const wallet = await query
   if (!wallet) {
     throw status('Not Found', 'Wallet not found')
   }
@@ -46,7 +50,27 @@ export async function deleteWallet(
   userId: Types.ObjectId,
   walletId: Types.ObjectId,
 ) {
-  const wallet = await getWallet(userId, walletId)
-  await wallet.deleteOne()
+  const session = await mongoose.startSession()
+  session.startTransaction()
+
+  const wallet = await getWallet(userId, walletId, session)
+
+  const transactionInWallet = await TransactionModel.countDocuments(
+    { $or: [{ wallet: wallet._id }, { targetWallet: wallet._id }] },
+    { session },
+  )
+
+  if (transactionInWallet > 0) {
+    throw status(
+      'Forbidden',
+      'Cannot delete the wallet if there are any transactions related to it',
+    )
+  }
+
+  await wallet.deleteOne({ session })
+
+  await session.commitTransaction()
+  await session.endSession()
+
   return wallet
 }

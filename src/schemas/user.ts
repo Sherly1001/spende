@@ -39,7 +39,7 @@ export const userModelSchema = new mongoose.Schema(
   schemaOptions,
 )
 
-export const UserModel = mongoose.model('User', userModelSchema)
+export const UserModel = mongoose.model<HydratedUser>('User', userModelSchema)
 
 export type HydratedUser = HydratedDocument<
   typeof userWithHashedPasswordSchema.static

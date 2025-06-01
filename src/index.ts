@@ -1,7 +1,7 @@
 import swagger from '@elysiajs/swagger'
 import { Elysia } from 'elysia'
 import mongoose from 'mongoose'
-import { user, wallet } from './services'
+import { transaction, user, wallet } from './services'
 import { HOST, MONGODB_URL, PORT, SWAGGER_PATH } from './utils/const'
 
 new Elysia({
@@ -60,6 +60,7 @@ new Elysia({
   })
   .use(user)
   .use(wallet)
+  .use(transaction)
   .listen(PORT, ({ hostname, port }) => {
     console.log(`Server is running at: http://${hostname}:${port}`)
   })

@@ -38,7 +38,10 @@ export const walletModelSchema = new mongoose.Schema(
   schemaOptions,
 )
 
-export const WalletModel = mongoose.model('Wallet', walletModelSchema)
+export const WalletModel = mongoose.model<HydratedWallet>(
+  'Wallet',
+  walletModelSchema,
+)
 
 export type HydratedWallet = HydratedDocument<typeof walletSchema.static>
 

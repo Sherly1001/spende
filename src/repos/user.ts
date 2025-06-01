@@ -1,7 +1,8 @@
 import { status } from 'elysia'
 import jwt from 'jsonwebtoken'
 import { isUndefined, omitBy } from 'lodash'
-import { Types } from 'mongoose'
+import mongoose, { Types } from 'mongoose'
+import { TagModel, TransactionModel } from '../schemas/transaction'
 import {
   createUserSchema,
   HydratedUser,
@@ -43,8 +44,22 @@ export async function updateUser(
 }
 
 export async function deleteUser(user: HydratedUser) {
-  await WalletModel.deleteMany({ user: user._id })
-  await user.deleteOne()
+  const session = await mongoose.startSession()
+  session.startTransaction()
+
+  const walletIds = await WalletModel.find({ user: user._id })
+    .session(session)
+    .select('_id')
+    .lean()
+    .then((ws) => ws.map((w) => w._id))
+
+  await TransactionModel.deleteMany({ wallet: { $in: walletIds } }, { session })
+  await TagModel.deleteMany({ user: user._id }, { session })
+  await WalletModel.deleteMany({ user: user._id }, { session })
+  await user.deleteOne({ session })
+
+  await session.commitTransaction()
+  await session.endSession()
 }
 
 export async function loginUser(username: string, password: string) {
